@@ -8,6 +8,7 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.border.EmptyBorder;
 import javax.swing.JTextField;
+import javax.swing.JTree;
 import javax.swing.ListModel;
 import javax.swing.ListSelectionModel;
 import javax.swing.JLabel;
@@ -20,12 +21,14 @@ import javax.swing.JCheckBox;
 import javax.swing.JFileChooser;
 import javax.swing.JTextArea;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EventObject;
 import java.util.List;
 import java.util.regex.Pattern;
 import java.awt.event.ActionEvent;
@@ -42,12 +45,25 @@ import javax.swing.JSplitPane;
 import javax.swing.JSpinner;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.BoxLayout;
+import javax.swing.DefaultCellEditor;
 import javax.swing.JComboBox;
+import javax.swing.JComponent;
 import javax.swing.DefaultComboBoxModel;
+import javax.swing.JTable;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.JTableHeader;
+import javax.swing.table.TableCellEditor;
+import javax.swing.table.TableCellRenderer;
+import javax.swing.table.TableColumn;
+import javax.swing.table.TableModel;
+import javax.swing.text.TableView.TableCell;
+import javax.swing.text.TableView.TableRow;
 
 @SuppressWarnings("serial")
 public class mainWindow extends JFrame {
 
+	final int ROW_COMBOBOX = 0;
+	
 	private JPanel contentPane;
 	private static JTextField outputField;
 	
@@ -61,10 +77,12 @@ public class mainWindow extends JFrame {
 	private JTextArea console;
 	private JScrollPane consoleSP;
 	
-	private ArrayList<Pattern> separators = new ArrayList<Pattern>();
-	private ArrayList<Pattern> types = new ArrayList<Pattern>();
-	
 	private mainWindow mainFrame = this;
+	private JTable table;
+	private ArrayList<JComboBox<String>> variableBox;
+	private ArrayList<DataVariables> variables;
+	
+	private JTable table_1;
 	
 	public mainWindow() {
 		setTitle("Dateitrennsystem");
@@ -81,14 +99,6 @@ public class mainWindow extends JFrame {
 		splitPane.setContinuousLayout(true);
 		splitPane.setOrientation(JSplitPane.VERTICAL_SPLIT);
 		contentPane.add(splitPane, BorderLayout.CENTER);
-		
-		DefaultListModel<String> listModel_2 = new DefaultListModel<String>();
-		listModel_2.addElement("00:00:00");
-		separators.add(Pattern.compile(listModel_2.get(0)));
-		
-		DefaultListModel<String> listModel = new DefaultListModel<String>();
-		listModel.addElement("\\d\\d:\\d\\d:\\d\\d");
-		types.add(Pattern.compile(listModel.get(0)));
 		
 		JPanel inputOutputArea = new JPanel();
 		splitPane.setLeftComponent(inputOutputArea);
@@ -221,17 +231,8 @@ public class mainWindow extends JFrame {
 		});
 		label.add(button_1, BorderLayout.EAST);
 		
-		JSplitPane settingsSplitter = new JSplitPane();
-		settingsSplitter.setResizeWeight(1.0);
-		settingsSplitter.setContinuousLayout(true);
-		settingsArea.add(settingsSplitter, BorderLayout.CENTER);
-		
-		JPanel panel_1 = new JPanel();
-		settingsSplitter.setLeftComponent(panel_1);
-		panel_1.setLayout(new BorderLayout(0, 0));
-		
 		JPanel checkBoxArea = new JPanel();
-		settingsSplitter.setRightComponent(checkBoxArea);
+		settingsArea.add(checkBoxArea, BorderLayout.EAST);
 		checkBoxArea.setBackground(Color.WHITE);
 		checkBoxArea.setLayout(new BorderLayout(0, 0));
 		
@@ -264,7 +265,99 @@ public class mainWindow extends JFrame {
 		comboBox.setSelectedIndex(0);
 		monthBegin.add(comboBox, BorderLayout.CENTER);
 		
+		JPanel generateDiagram = new JPanel();
+		panel.add(generateDiagram);
+		generateDiagram.setLayout(new BorderLayout(0, 0));
 		
+		JCheckBox chckbxDiagrammeGenerieren = new JCheckBox("Diagramme generieren");
+		generateDiagram.add(chckbxDiagrammeGenerieren);
+		
+		JSplitPane splitPane_2 = new JSplitPane();
+		splitPane_2.setContinuousLayout(true);
+		splitPane_2.setResizeWeight(0.8);
+		settingsArea.add(splitPane_2, BorderLayout.CENTER);
+		
+		JPanel tablePanel = new JPanel();
+		splitPane_2.setLeftComponent(tablePanel);
+		tablePanel.setLayout(new BorderLayout(0, 0));
+		
+		table = new JTable();
+		table.setColumnSelectionAllowed(true);
+		table.setFillsViewportHeight(true);
+		table.setModel(new DefaultTableModel(
+			new Object[][] {
+				{"Tabellenkopf"},
+				{"Tabellenwert (wiederholend)"},
+			},
+			new String[] {
+				"",
+				""
+			}
+		) {
+			public boolean isCellEditable(int row, int column) {
+				return (column > 0);
+			}
+		});
+		
+		JComboBox<String> box = new JComboBox<String>();
+		box.addItem("test");
+		box.addItem("test");
+		box.addItem("test");
+		TableColumn column = table.getColumnModel().getColumn(1);
+		column.setCellEditor(new ComboBoxCellEditor(box));
+		table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+		
+		JScrollPane tableScroller = new JScrollPane(table);
+		tablePanel.add(tableScroller, BorderLayout.CENTER);
+		
+		JPanel tableSettings = new JPanel();
+		tablePanel.add(tableSettings, BorderLayout.SOUTH);
+		tableSettings.setLayout(new BorderLayout(0, 0));
+		
+		JButton btnNeueSpalte = new JButton("neue Spalte");
+		btnNeueSpalte.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				DefaultTableModel model = (DefaultTableModel) table.getModel();
+				JComboBox<String> box = new JComboBox<String>();
+				box.addItem("test");
+				box.addItem("test");
+				box.addItem("test");
+
+				table.addColumn(new TableColumn());
+
+				TableColumn column = table.getColumnModel().getColumn(0);
+				column.setCellEditor(new DefaultCellEditor(box));
+				
+				
+			}
+		});
+		tableSettings.add(btnNeueSpalte, BorderLayout.NORTH);
+		
+		JLabel lblTabelle = new JLabel("Tabelle");
+		tablePanel.add(lblTabelle, BorderLayout.NORTH);
+		
+		JPanel variablePanel = new JPanel();
+		splitPane_2.setRightComponent(variablePanel);
+		variablePanel.setLayout(new BorderLayout(0, 0));
+		
+		table_1 = new JTable();
+		variablePanel.add(table_1);
+		
+		JPanel variableSettings = new JPanel();
+		variablePanel.add(variableSettings, BorderLayout.SOUTH);
+		variableSettings.setLayout(new GridLayout(0, 2, 0, 0));
+		
+		JButton addVariable = new JButton("hinzuf\u00FCgen");
+		variableSettings.add(addVariable);
+		
+		JButton btnEntfernen = new JButton("entfernen");
+		variableSettings.add(btnEntfernen);
+		
+		JLabel lblVariablen = new JLabel("Variablen");
+		variablePanel.add(lblVariablen, BorderLayout.NORTH);
+		variableBox = new ArrayList<JComboBox<String>>();
 		
 		JPanel startArea = new JPanel();
 		
@@ -293,6 +386,18 @@ public class mainWindow extends JFrame {
 				clearConsole();
 			}
 		});
+	}
+	
+	public void updateVariableNames(ArrayList<DataVariables> variables, ArrayList<JComboBox<String>> box) {
+		if (variables != null && box != null) {
+			for (JComboBox<String> cb : box) {
+				cb.removeAllItems();
+				
+				for (int i = 0; i < variables.size(); i++) {
+					cb.addItem(variables.get(i).getName());
+				}
+			}
+		}
 	}
 	
 	public static File[] convertArrayListToArray (ArrayList<File> f) {
@@ -362,5 +467,32 @@ public class mainWindow extends JFrame {
                 compList.addAll(getAllComponents((Container) comp));
         }
         return compList;
-}
+	}
+	
+	public class ComboBoxCellEditor extends DefaultCellEditor {
+
+		JComboBox comboBox;
+		JComponent mainEditor;
+		
+	    /**
+	     * Creates a new ComboBoxCellEditor.
+	     * 
+	     * @param comboBox the comboBox that should be used as the cell editor.
+	     */
+	    public ComboBoxCellEditor(final JComboBox comboBox) {
+	    	super(comboBox);
+	    	this.comboBox = comboBox;
+	    }
+	    
+	    @Override
+	    public Component getTableCellEditorComponent(JTable table, Object value, boolean isSelected, int row, int column) {
+	    	if (row == ROW_COMBOBOX) {
+	    		super.editorComponent = comboBox;
+	    	}
+	    	else {
+	    		super.editorComponent = outputField;
+	    	}
+			return super.getTableCellEditorComponent(table, value, isSelected, row, column);
+	    }
+	}
 }
