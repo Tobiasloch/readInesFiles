@@ -24,6 +24,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -37,8 +38,12 @@ import java.awt.Component;
 import java.awt.Container;
 import java.awt.Desktop;
 
+import javax.swing.event.ChangeEvent;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
+import javax.swing.event.TableColumnModelEvent;
+import javax.swing.event.TableColumnModelListener;
+import javax.swing.plaf.basic.BasicInternalFrameTitlePane.MoveAction;
 import javax.swing.JList;
 import javax.swing.SwingConstants;
 import javax.swing.JSplitPane;
@@ -50,6 +55,7 @@ import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JTable;
+import javax.swing.table.DefaultTableColumnModel;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
 import javax.swing.table.TableCellEditor;
@@ -79,7 +85,7 @@ public class mainWindow extends JFrame {
 	
 	private mainWindow mainFrame = this;
 	private JTable table;
-	private ArrayList<JComboBox<String>> variableBox;
+	private ArrayList<JComboBox<String>> variableBoxes;
 	private ArrayList<DataVariables> variables;
 	
 	private JTable table_1;
@@ -282,6 +288,39 @@ public class mainWindow extends JFrame {
 		tablePanel.setLayout(new BorderLayout(0, 0));
 		
 		table = new JTable();
+		int[] notReordering = new int[] {0};
+		table.setColumnModel(new reorderingTableColumnModel(notReordering));
+		table.getColumnModel().addColumnModelListener(new TableColumnModelListener() {
+			
+			@Override
+			public void columnSelectionChanged(ListSelectionEvent e) {
+				// TODO Auto-generated method stub
+				
+			}
+			
+			@Override
+			public void columnRemoved(TableColumnModelEvent e) {
+				
+			}
+			
+			@Override
+			public void columnMoved(TableColumnModelEvent arg0) {
+				// TODO Auto-generated method stub
+				
+			}
+			
+			@Override
+			public void columnMarginChanged(ChangeEvent arg0) {
+				// TODO Auto-generated method stub
+				
+			}
+			
+			@Override
+			public void columnAdded(TableColumnModelEvent arg0) {
+				// TODO Auto-generated method stub
+				
+			}
+		});;
 		table.setColumnSelectionAllowed(true);
 		table.setFillsViewportHeight(true);
 		table.setModel(new DefaultTableModel(
@@ -290,7 +329,6 @@ public class mainWindow extends JFrame {
 				{"Tabellenwert (wiederholend)"},
 			},
 			new String[] {
-				"",
 				""
 			}
 		) {
@@ -298,13 +336,6 @@ public class mainWindow extends JFrame {
 				return (column > 0);
 			}
 		});
-		
-		JComboBox<String> box = new JComboBox<String>();
-		box.addItem("test");
-		box.addItem("test");
-		box.addItem("test");
-		TableColumn column = table.getColumnModel().getColumn(1);
-		column.setCellEditor(new ComboBoxCellEditor(box));
 		table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		
 		JScrollPane tableScroller = new JScrollPane(table);
@@ -314,6 +345,8 @@ public class mainWindow extends JFrame {
 		tablePanel.add(tableSettings, BorderLayout.SOUTH);
 		tableSettings.setLayout(new BorderLayout(0, 0));
 		
+		variables = new ArrayList<DataVariables>();
+		
 		JButton btnNeueSpalte = new JButton("neue Spalte");
 		btnNeueSpalte.addActionListener(new ActionListener() {
 			
@@ -321,14 +354,12 @@ public class mainWindow extends JFrame {
 			public void actionPerformed(ActionEvent e) {
 				DefaultTableModel model = (DefaultTableModel) table.getModel();
 				JComboBox<String> box = new JComboBox<String>();
-				box.addItem("test");
-				box.addItem("test");
-				box.addItem("test");
-
-				table.addColumn(new TableColumn());
-
-				TableColumn column = table.getColumnModel().getColumn(0);
-				column.setCellEditor(new DefaultCellEditor(box));
+				variableBoxes.add(box);
+				updateVariableNames(variables, variableBoxes);
+				
+				model.addColumn("");
+				TableColumn column = table.getColumnModel().getColumn(model.getColumnCount()-1);
+				column.setCellEditor(new ComboBoxCellEditor(box, ROW_COMBOBOX, 1));
 				
 				
 			}
@@ -343,6 +374,21 @@ public class mainWindow extends JFrame {
 		variablePanel.setLayout(new BorderLayout(0, 0));
 		
 		table_1 = new JTable();
+		table_1.setTableHeader(null);
+		table_1.setModel(new DefaultTableModel(
+			new Object[][] {
+			},
+			new String[] {
+				""
+			}
+		) {
+			Class[] columnTypes = new Class[] {
+				String.class
+			};
+			public Class getColumnClass(int columnIndex) {
+				return columnTypes[columnIndex];
+			}
+		});
 		variablePanel.add(table_1);
 		
 		JPanel variableSettings = new JPanel();
@@ -357,7 +403,7 @@ public class mainWindow extends JFrame {
 		
 		JLabel lblVariablen = new JLabel("Variablen");
 		variablePanel.add(lblVariablen, BorderLayout.NORTH);
-		variableBox = new ArrayList<JComboBox<String>>();
+		variableBoxes = new ArrayList<JComboBox<String>>();
 		
 		JPanel startArea = new JPanel();
 		
@@ -469,25 +515,46 @@ public class mainWindow extends JFrame {
         return compList;
 	}
 	
+	public class reorderingTableColumnModel extends DefaultTableColumnModel {
+		
+		int[] notReordering;
+		
+		public reorderingTableColumnModel(int[] notReordering) {
+			super();
+			
+			this.notReordering = notReordering;
+		}
+		
+		@Override
+		public void moveColumn(int columnIndex, int newIndex) {
+			for (int i : notReordering) if (i==columnIndex) return;
+			super.moveColumn(columnIndex, newIndex);
+		}
+	}
+	
 	public class ComboBoxCellEditor extends DefaultCellEditor {
 
-		JComboBox comboBox;
+		JComboBox<String> comboBoxes;
 		JComponent mainEditor;
+		int rowPosition;
+		int startingColumnPosition;
 		
 	    /**
 	     * Creates a new ComboBoxCellEditor.
 	     * 
 	     * @param comboBox the comboBox that should be used as the cell editor.
 	     */
-	    public ComboBoxCellEditor(final JComboBox comboBox) {
+	    public ComboBoxCellEditor(final JComboBox<String> comboBox, int rowPosition, int startingColumnPosition) {
 	    	super(comboBox);
-	    	this.comboBox = comboBox;
+	    	comboBoxes = comboBox;
+	    	this.rowPosition = rowPosition;
+	    	this.startingColumnPosition = startingColumnPosition;
 	    }
 	    
 	    @Override
 	    public Component getTableCellEditorComponent(JTable table, Object value, boolean isSelected, int row, int column) {
-	    	if (row == ROW_COMBOBOX) {
-	    		super.editorComponent = comboBox;
+	    	if (row == rowPosition && column-startingColumnPosition >= 0) {
+	    		super.editorComponent = comboBoxes;
 	    	}
 	    	else {
 	    		super.editorComponent = outputField;

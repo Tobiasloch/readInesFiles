@@ -1,20 +1,37 @@
 package readInesData;
 
+import java.util.ArrayList;
+import java.util.regex.Pattern;
+
 public class DataVariables<T> {
 	
-	private T variable;
+	private ArrayList<T> variables;
 	private String name;
+	private ArrayList<Pattern> regexp;
 	
 	public DataVariables() {
-		name = "";
+		name = "DataVariable";
+		variables = new ArrayList<T>();
+		regexp = new ArrayList<Pattern>();
 	}
 	
-	public T getVariable() {
-		return variable;
+	public ArrayList<T> getVariables() {
+		return variables;
 	}
-
-	public void setVariable(T variable) {
-		this.variable = variable;
+	
+	public void addVariable(T variable, String regexp) {
+		this.variables.add(variable);
+		this.regexp.add(Pattern.compile(regexp));
+	}
+	
+	public void removeVariable(T variable, String regexp) {
+		this.variables.remove(variable);
+		this.regexp.remove(Pattern.compile(regexp));
+	}
+	
+	public void removeVariable(int index) {
+		this.variables.remove(index);
+		this.regexp.remove(index);
 	}
 
 	public String getName() {
@@ -24,5 +41,8 @@ public class DataVariables<T> {
 	public void setName(String name) {
 		this.name = name;
 	}
-	
+
+	public ArrayList<Pattern> getRegexp() {
+		return regexp;
+	}
 }
